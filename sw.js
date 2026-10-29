@@ -1,5 +1,5 @@
 // Service Worker: Offline-Cache. Bei jedem Release VERSION erhöhen!
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = `dart-counter-${VERSION}`;
 
 const FILES = [
@@ -18,11 +18,13 @@ const FILES = [
   './js/core/checkout.js',
   './js/core/checkout-table.js',
   './js/core/quick.js',
+  './js/core/tournament.js',
   './js/bot/throw-model.js',
   './js/bot/strategy.js',
   './js/bot/simulate.js',
   './js/bot/calibration-table.js',
   './js/bot/bot-player.js',
+  './js/bot/sim-match.js',
   './js/stats/stats.js',
   './js/stats/csv.js',
   './js/data/db.js',
@@ -30,6 +32,7 @@ const FILES = [
   './js/ui/app.js',
   './js/ui/dom.js',
   './js/ui/chart.js',
+  './js/ui/board-svg.js',
   './js/ui/views/home.js',
   './js/ui/views/setup.js',
   './js/ui/views/game.js',
@@ -38,6 +41,7 @@ const FILES = [
   './js/ui/views/history.js',
   './js/ui/views/backup.js',
   './js/ui/views/dev.js',
+  './js/ui/views/tournament.js',
 ];
 
 self.addEventListener('install', (event) => {

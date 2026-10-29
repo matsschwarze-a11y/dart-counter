@@ -9,6 +9,7 @@ import { isBotTurn, nextBotDart } from '../../bot/bot-player.js';
 import { matchPlayerStats } from '../../stats/stats.js';
 
 const BOT_DELAY = 1000;
+const HOLD_MS = 3000; // abgeschlossene Aufnahme bleibt so lange sichtbar
 const OUT_LABEL = { double: 'Double-out', master: 'Master-out', straight: 'Straight-out' };
 
 export async function renderGame(root, ctx) {
@@ -26,12 +27,14 @@ export async function renderGame(root, ctx) {
   let paused = false;
   let botTimer = null;
   let overlay = null; // {type:'leg'|'match', ...}
+  let hold = null; // gerade abgeschlossene Aufnahme {p, visit}, bleibt HOLD_MS sichtbar
+  let holdTimer = null;
   let destroyed = false;
   let saveChain = Promise.resolve();
 
   const s0 = match.settings;
   const fmtLabel = `${s0.format.type === 'bestOf' ? 'Best of' : 'First to'} ${s0.format.sets ? `${s0.format.sets} Sets · ` : ''}${s0.format.legs} Legs`;
-  ctx.setTitle(`${s0.startScore} · ${OUT_LABEL[s0.outMode]}${s0.doubleIn ? ' · Double-in' : ''}`, {
+  ctx.setTitle(`${match.tournament ? match.tournament.roundName + ' · ' : ''}${s0.startScore} · ${OUT_LABEL[s0.outMode]}${s0.doubleIn ? ' · Double-in' : ''}`, {
     back: '#/',
     right: h('button', { class: 'btn small ghost', onClick: () => openHistorySheet() }, 'Verlauf'),
   });
@@ -66,10 +69,12 @@ export async function renderGame(root, ctx) {
   }
 
   // ---------- Eingabe ----------
-  function input(dart) {
+  function input(dart, { batch = false } = {}) {
     if (overlay || match.status !== 'running') return;
+    endHold(false);
     const legsBefore = match.legs.length;
     const legIdx = legsBefore - 1;
+    const p = currentState(match).player;
     addDart(match, dart);
     mult = 1;
     save();
@@ -78,12 +83,30 @@ export async function renderGame(root, ctx) {
     } else if (match.legs.length > legsBefore) {
       overlay = { type: 'leg', legIndex: legIdx };
     }
-    render();
+    const mine = match.legs[legIdx].visits.filter((v) => v.p === p);
+    const v = mine[mine.length - 1];
+    if (v && (v.darts.length === 3 || v.bust || v.checkout)) startHold(p, v);
+    if (!batch) render();
+  }
+
+  function startHold(p, visit) {
+    hold = { p, visit };
+    clearTimeout(holdTimer);
+    holdTimer = setTimeout(() => endHold(true), HOLD_MS);
+  }
+
+  function endHold(rerender) {
+    if (!hold) return;
+    hold = null;
+    clearTimeout(holdTimer);
+    holdTimer = null;
+    if (rerender) render();
   }
 
   function doUndo() {
     if (!match.inputs.length) return;
     stopBot();
+    endHold(false);
     overlay = null;
     undo(match);
     mult = 1;
@@ -100,10 +123,10 @@ export async function renderGame(root, ctx) {
 
   function scheduleBot() {
     stopBot();
-    if (destroyed || paused || overlay || !isBotTurn(match)) return;
+    if (destroyed || paused || overlay || hold || !isBotTurn(match)) return;
     botTimer = setTimeout(() => {
       botTimer = null;
-      if (destroyed || paused || overlay || !isBotTurn(match)) return;
+      if (destroyed || paused || overlay || hold || !isBotTurn(match)) return;
       input(nextBotDart(match));
     }, BOT_DELAY);
   }
@@ -155,20 +178,29 @@ export async function renderGame(root, ctx) {
     });
     game.append(board);
 
-    // Aktuelle Aufnahme
+    // Aktuelle Aufnahme – direkt nach einer abgeschlossenen Aufnahme bleibt diese kurz stehen (Tippen = weiter)
     const vd = st.visitDarts;
-    const visitSum = vd.reduce((s, d) => s + d.points, 0);
     const restNow = st.rests[st.player];
-    game.append(h('div', { class: 'visit-line', 'aria-live': 'polite' },
-      [0, 1, 2].map((k) => h('div', { class: 'vdart' + (vd[k] ? ' filled' : '') + (k === vd.length && !st.finished ? ' next' : '') }, vd[k] ? dartLabel(vd[k]) : '–')),
-      h('div', { class: 'vsum' }, vd.length ? String(visitSum) : '')));
+    const showHold = hold && !vd.length;
+    const shown = showHold ? hold.visit.darts : vd;
+    const visitSum = shown.reduce((s, d) => s + d.points, 0);
+    const sumText = showHold ? (hold.visit.bust ? 'Bust' : String(hold.visit.score)) : vd.length ? String(visitSum) : '';
+    game.append(h('div', {
+      class: 'visit-line' + (showHold ? ' hold' : ''),
+      'aria-live': 'polite',
+      onClick: showHold ? () => endHold(true) : null,
+    },
+    [0, 1, 2].map((k) => h('div', { class: 'vdart' + (shown[k] ? ' filled' : '') + (!showHold && k === vd.length && !st.finished ? ' next' : '') }, shown[k] ? dartLabel(shown[k]) : '–')),
+    h('div', { class: 'vsum' }, sumText)));
 
     // Letzte abgeschlossene Aufnahme (damit Bot-Darts sichtbar bleiben)
     const curLeg = match.legs[st.legIndex];
     const done = curLeg ? curLeg.visits.filter((v) => v.darts.length === 3 || v.bust || v.checkout) : [];
     const prev = done[done.length - 1];
-    game.append(h('div', { class: 'last-line' }, prev && !vd.length
-      ? `${match.participants[prev.p].name}: ${prev.darts.map(dartLabel).join(' · ')} = ${prev.bust ? 'Bust' : prev.score}`
+    game.append(h('div', { class: 'last-line' + (showHold ? ' hold' : '') }, showHold
+      ? `${match.participants[hold.p].name}${hold.visit.checkout ? ' checkt aus' : ` · Rest ${hold.visit.endRest}`}`
+      : prev && !vd.length
+        ? `${match.participants[prev.p].name}: ${prev.darts.map(dartLabel).join(' · ')} = ${prev.bust ? 'Bust' : prev.score}`
       : ' '));
 
     // Checkout-Vorschlag
@@ -267,6 +299,20 @@ export async function renderGame(root, ctx) {
         h('button', { class: 'btn big block', onClick: doUndo }, '↶ Rückgängig'));
     }
     const w = match.winnerIndex;
+    if (match.tournament) {
+      const bots = match.participants.filter((p) => p.isBot);
+      return h('div', { class: 'overlay-panel' },
+        h('div', { class: 'ov-title' }, `${w === 0 ? '🏆 ' : ''}${match.participants[w].name} gewinnt das ${match.tournament.roundName}`),
+        bots.map((b) => h('div', { class: 'ov-sub' }, `${b.name} spielte mit Ziel-Average `, h('b', {}, String(b.botAverage)))),
+        h('table', { class: 'ov-table' },
+          h('tr', {}, h('th', {}, ''), h('th', {}, 'Legs'), h('th', {}, 'Ø'), h('th', {}, 'Doppel')),
+          match.participants.map((p, i) => {
+            const s = matchPlayerStats(match, i);
+            return h('tr', {}, h('td', {}, p.name), h('td', {}, String(s.legsWon)), h('td', {}, fmt(s.average)), h('td', {}, s.attempts ? `${s.checkouts}/${s.attempts}` : '–'));
+          })),
+        h('a', { class: 'btn primary big block', href: '#/turnier' }, 'Zum Turnier'),
+        h('button', { class: 'btn block', onClick: doUndo }, '↶ Rückgängig'));
+    }
     return h('div', { class: 'overlay-panel' },
       h('div', { class: 'ov-title' }, `🏆 ${match.participants[w].name} gewinnt`),
       h('table', { class: 'ov-table' },
@@ -292,6 +338,7 @@ export async function renderGame(root, ctx) {
     await saveChain;
     await repo.saveMatch(next);
     match = next;
+    endHold(false);
     overlay = null;
     paused = false;
     render();
@@ -395,6 +442,7 @@ export async function renderGame(root, ctx) {
   return () => {
     destroyed = true;
     stopBot();
+    clearTimeout(holdTimer);
     document.removeEventListener('visibilitychange', onVisible);
     wakeLock?.release?.().catch(() => {});
   };

@@ -10,6 +10,7 @@ import { renderStats } from './views/stats.js';
 import { renderHistory, renderMatchDetail } from './views/history.js';
 import { renderBackup } from './views/backup.js';
 import { renderDev } from './views/dev.js';
+import { renderTournament } from './views/tournament.js';
 
 const view = document.getElementById('view');
 const titleEl = document.getElementById('title');
@@ -39,6 +40,7 @@ const ROUTES = [
   [/^#?\/?$/, renderHome],
   [/^#\/neu$/, renderSetup],
   [/^#\/spiel$/, renderGame],
+  [/^#\/turnier$/, renderTournament],
   [/^#\/spieler$/, renderPlayers],
   [/^#\/statistik$/, renderStats],
   [/^#\/historie$/, renderHistory],

@@ -4,11 +4,13 @@ Zähl-App für Steeldart auf dem Handy – als installierbare Web-App (PWA), off
 Gegen Freunde oder gegen einen Bot, dessen Stärke über einen Ziel-Average (25–100) eingestellt
 wird und der Dart für Dart wie ein Mensch wirft. Jedes Spiel wird gespeichert und ausgewertet.
 
-- X01: 301 / 501 / 701, Double-/Master-/Straight-out, optional Double-in, Legs und Sets
+- X01: 301 / 501, Double-/Master-/Straight-out, optional Double-in, Legs und Sets
 - Eingabe jedes Darts einzeln (Single/Double/Triple + Zahl) plus Schnellwahl (26, 41, 45, 60, 81, 85, 100, 140, 180, 0)
 - Rückgängig pro Dart, Aufnahmen nachträglich ändern, Checkout-Vorschläge nach jedem Dart
+- Jede abgeschlossene Aufnahme bleibt 3 Sekunden sichtbar
 - Bot mit realistischem Wurfbild, 1 Dart pro Sekunde
-- Statistik pro Spieler (Average, First 9, Checkout-Quote, Doppelquote je Feld, Verlauf, Head-to-Head, Historie)
+- Turnier: K.-o. mit 8 Teilnehmern, Gegner rund um deinen Average, Stärke wird erst nach dem Spiel aufgedeckt
+- Statistik pro Spieler (Average, First 9, Checkout-Quote, Doppelquote je Feld, Wurfbild, Streutendenz, Verlauf, Head-to-Head, Historie)
 - Sicherung als JSON, Export als CSV für Excel
 
 Keine Abhängigkeiten, kein Build-Schritt: reines HTML, CSS und JavaScript.
@@ -49,7 +51,7 @@ Danach wie oben Schritt 6 (Settings → Pages).
 ### Updates veröffentlichen
 
 1. Dateien ändern und hochladen bzw. pushen.
-2. **Wichtig:** In `sw.js` die Zeile `const VERSION = 'v1';` hochzählen (`'v2'`, `'v3'`, …).
+2. **Wichtig:** In `sw.js` die Zeile `const VERSION = 'v2';` hochzählen (`'v3'`, `'v4'`, …).
    Nur dann merkt die installierte App, dass es etwas Neues gibt.
 3. Beim nächsten Öffnen erscheint unten „Neue Version verfügbar – Aktualisieren".
    Neue Dateien zusätzlich in die Liste `FILES` in `sw.js` eintragen (ein Test prüft das).
@@ -93,6 +95,13 @@ Danach wie oben Schritt 6 (Settings → Pages).
 - **↶** nimmt den letzten Dart zurück – auch über Spielerwechsel und Leg-Ende hinweg.
 - **Verlauf** (oben rechts): Aufnahmen des laufenden (bzw. gerade beendeten) Legs ansehen und ändern.
 - **Bot**: wirft 1 Dart pro Sekunde. *Pause* hält an, *Sofort beenden* wirft den Rest der Aufnahme sofort.
+- **Nach jeder Aufnahme** bleiben die drei Darts 3 Sekunden stehen. Antippen oder einfach weiter eingeben überspringt das.
+- **Turnier**: Spieler und eigenen Average wählen (vorbelegt mit dem 501-Average der letzten 30 Tage).
+  Die 7 Gegner liegen höchstens zwei Standardabweichungen (10 % des Averages) um diesen Wert und sind
+  nach Stärke gesetzt. Viertel- und Halbfinale First to 3, Finale First to 4, jeweils 501 Double-out.
+  Die Ziel-Averages deiner Gegner siehst du nach jedem eurer Spiele, die aller anderen am Turnierende.
+- **Wurfbild** (Statistik): Scheibe mit allen Treffern, filterbar nach 1./2./3. Dart der Aufnahme.
+  Die Streutendenz wertet Darts bei Rest ab 100 aus: links/rechts (5/1 bzw. 7/3) und Triple/Single/Double.
 - **Entwickler-Seite**: App mit `?dev=1` öffnen (z. B. `…/dart-counter/?dev=1`) → Menüpunkt
   „Entwickler: Bot-Simulation" simuliert 1.000 Legs für einen Ziel-Average.
 
@@ -135,6 +144,7 @@ werden per Replay abgeleitet und mitgespeichert. Dadurch funktionieren Rückgän
 (vertikal 1,2× stärker als horizontal) auf einer Scheibe mit Originalmaßen. Pro Leg schwankt die
 Form um einige Prozent. Der Bot punktet auf T20 (wechselt nach Fehlwürfen in 1/5 manchmal auf T19,
 schwache Bots zielen öfter auf das breite Single-Feld), stellt sich mit dem letzten Dart einen guten
-Rest und folgt beim Checkout der Tabelle. Welche Streuung zu welchem Average führt, wurde per
+Rest und folgt beim Checkout der Tabelle. Schwächere Bots planen den Stell-Dart nicht immer: Dann punkten sie einfach
+weiter oder stellen nach Faustregel (z. B. auf 40 oder 32), wie Amateure auch. Welche Streuung zu welchem Average führt, wurde per
 Monte-Carlo-Simulation ganzer Legs ermittelt (`tools/calibrate.js`); der Test prüft, dass die
 Ziel-Averages 30/50/70/90 über 1.000 Legs auf ±2 Punkte getroffen werden.

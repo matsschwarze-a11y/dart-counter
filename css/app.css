@@ -30,7 +30,7 @@ body {
   touch-action: manipulation;
   overscroll-behavior: none;
 }
-button, input, select { font: inherit; color: inherit; }
+button, input, select { font: inherit; color: inherit; touch-action: manipulation; }
 a { color: inherit; text-decoration: none; }
 h2 { font-size: 1.05rem; margin: 0 0 10px; }
 h3 { font-size: .95rem; margin: 14px 0 6px; color: var(--muted); }
@@ -135,6 +135,26 @@ body[data-view="renderGame"] { overflow: hidden; }
 .vdart.next { border-color: var(--accent); }
 .vsum { text-align: right; font-size: 1.4rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .last-line { text-align: center; color: var(--muted); font-size: .85rem; min-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Gerade abgeschlossene Aufnahme, bleibt kurz stehen */
+.visit-line.hold { cursor: pointer; }
+.visit-line.hold .vdart.filled { border-color: var(--accent); background: #15261e; }
+.last-line.hold { color: var(--text); font-weight: 600; }
+
+/* Wurfbild */
+.board-svg { --heat: #ff7a45; --board-empty: var(--surface-2); width: 100%; max-width: 360px; align-self: center; display: block; margin: 0 auto; }
+.board-field { stroke: var(--bg); stroke-width: 1; }
+.board-num { fill: var(--muted); font-size: 15px; font-weight: 700; text-anchor: middle; }
+.top-fields { display: flex; flex-wrap: wrap; gap: 6px; }
+.top-field { background: var(--surface-2); border-radius: 8px; padding: 4px 8px; font-size: .85rem; font-variant-numeric: tabular-nums; }
+.table.compact th, .table.compact td { text-align: center; }
+.card h3 { font-size: .95rem; margin: 6px 0 0; }
+
+/* Turnier */
+.bgame { background: var(--surface-2); border-radius: 10px; padding: 6px 10px; display: flex; flex-direction: column; gap: 2px; }
+.bgame.mine { outline: 2px solid var(--accent); }
+.bline.winner > span:first-child { font-weight: 800; color: var(--accent); }
+.reveal { border-color: var(--accent); }
+.reveal-avg b, .ov-sub b { font-size: 1.2rem; color: var(--accent); }
 .checkout { min-height: 26px; text-align: center; font-weight: 700; color: var(--muted); font-size: .95rem; }
 .checkout.has { color: var(--warn); font-size: 1.1rem; letter-spacing: .02em; }
 

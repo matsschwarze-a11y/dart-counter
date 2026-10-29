@@ -62,16 +62,38 @@ export function chooseTarget(ctx) {
   const route = getCheckoutDarts(rest, dartsLeft, outMode);
   if (route) return route[0];
 
+  // Amateure planen den Stell-Dart oft nicht: dann wird einfach weiter gepunktet bzw. nach Faustregel gestellt.
+  const plans = !ctx.rand || ctx.rand() >= noPlanProbability(sigma);
+
   // Stellen: letzter Dart der Aufnahme, Rest im Finish-Bereich → besten Rest anwerfen.
-  if (dartsLeft === 1 && rest <= 170) return bestSetup(rest, ctx.visitStart, sigma, outMode);
+  if (dartsLeft === 1 && rest <= 170) {
+    if (plans) return bestSetup(rest, ctx.visitStart, sigma, outMode);
+    if (rest > 60) return visit.wide ? S(visit.scoringNumber || 20) : T(visit.scoringNumber || 20);
+    return ruleOfThumbSetup(rest, outMode);
+  }
 
   // Stellen mit mehreren Darts: Scoring würde busten/1 lassen → kleiner werfen.
-  if (rest <= 70) return bestSetup(rest, ctx.visitStart, sigma, outMode);
+  if (rest <= 70) return plans ? bestSetup(rest, ctx.visitStart, sigma, outMode) : ruleOfThumbSetup(rest, outMode);
 
   // Scoring
   const n = visit.scoringNumber || 20;
   if (visit.wide) return S(n);
   return T(n);
+}
+
+/** Wahrscheinlichkeit, dass ein Bot einen Stell-Dart nicht optimal plant (stark ≈ 5 %, schwach bis 75 %). */
+export function noPlanProbability(sigma) {
+  return Math.min(0.75, Math.max(0.05, (sigma - 5) / 30));
+}
+
+/** Stellen nach Faustregel: Single anwerfen, das 40, 32, 16 … übrig lässt. */
+function ruleOfThumbSetup(rest, outMode) {
+  const leaves = outMode === 'double' ? [40, 32, 36, 24, 16, 20, 8] : [];
+  for (const l of leaves) {
+    const need = rest - l;
+    if (need >= 1 && need <= 20) return S(need);
+  }
+  return S(Math.min(20, Math.max(1, rest - 2)));
 }
 
 function bestSetup(rest, visitStart, sigma, outMode) {

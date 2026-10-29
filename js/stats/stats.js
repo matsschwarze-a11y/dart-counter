@@ -155,3 +155,78 @@ export function matchSummary(match) {
   const averages = match.participants.map((_, p) => matchPlayerStats(match, p).average);
   return { legsWon, averages };
 }
+
+// ---------- Wurfbild ----------
+
+/** Alle Darts eines Spielers mit Position in der Aufnahme (0–2), gefiltert. */
+function playerDarts(matches, playerId, filter) {
+  const out = [];
+  for (const m of filterMatches(matches, playerId, filter)) {
+    const p = participantIndex(m, playerId);
+    for (const leg of m.legs) {
+      for (const v of leg.visits) {
+        if (v.p !== p) continue;
+        v.darts.forEach((d, k) => out.push({ d, k }));
+      }
+    }
+  }
+  return out;
+}
+
+/** Feldschlüssel für das Wurfbild: "20|3", "25|2", "0|1". */
+export const fieldKey = (d) => `${d.seg}|${d.seg === 0 ? 1 : d.mult}`;
+
+/**
+ * Trefferverteilung auf der Scheibe. dartNo: 'all' | 1 | 2 | 3 (Position in der Aufnahme).
+ * Liefert {total, counts: {fieldKey: n}}.
+ */
+export function throwPattern(matches, playerId, filter = {}, dartNo = 'all') {
+  const counts = {};
+  let total = 0;
+  for (const { d, k } of playerDarts(matches, playerId, filter)) {
+    if (dartNo !== 'all' && k !== dartNo - 1) continue;
+    const key = fieldKey(d);
+    counts[key] = (counts[key] || 0) + 1;
+    total++;
+  }
+  return { total, counts };
+}
+
+// Zielbereiche fürs Punkten: Zahl in der Mitte, Nachbarn links/rechts (Blick auf die Scheibe).
+export const SCORING_GROUPS = Object.freeze({ 20: { left: 5, right: 1 }, 19: { left: 7, right: 3 } });
+const SCORING_MIN_REST = 100; // darunter wird meist gestellt oder ausgecheckt
+
+/**
+ * Streutendenz beim Punkten: Darts mit Rest ≥ 100, die im 20er- bzw. 19er-Bereich landen.
+ * Horizontal: links/Mitte/rechts; vertikal: Triple (auf der Linie), Single, Double (zu weit außen).
+ * Zusätzlich je Dart-Position (1–3) die Triple-Quote im jeweiligen Bereich.
+ */
+export function scatterTendency(matches, playerId, filter = {}) {
+  const groups = {};
+  for (const n of Object.keys(SCORING_GROUPS)) {
+    groups[n] = { n: 0, left: 0, center: 0, right: 0, triple: 0, single: 0, double: 0, byDart: [0, 1, 2].map(() => ({ n: 0, triple: 0 })) };
+  }
+  let scoring = 0;
+  let outside = 0;
+  for (const { d, k } of playerDarts(matches, playerId, filter)) {
+    if (!(d.remBefore >= SCORING_MIN_REST)) continue;
+    scoring++;
+    const entry = Object.entries(SCORING_GROUPS).find(([n, g]) => d.seg === Number(n) || d.seg === g.left || d.seg === g.right);
+    if (!entry) {
+      outside++;
+      continue;
+    }
+    const [n, g] = entry;
+    const t = groups[n];
+    t.n++;
+    if (d.seg === g.left) t.left++;
+    else if (d.seg === g.right) t.right++;
+    else t.center++;
+    if (d.mult === 3) t.triple++;
+    else if (d.mult === 2) t.double++;
+    else t.single++;
+    t.byDart[k].n++;
+    if (d.seg === Number(n) && d.mult === 3) t.byDart[k].triple++;
+  }
+  return { scoring, outside, groups };
+}

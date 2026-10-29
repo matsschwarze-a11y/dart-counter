@@ -122,39 +122,54 @@ export function downloadFile(name, content, type) {
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
-/** Segmentierte Auswahl. options: [{value,label}] */
+/**
+ * Segmentierte Auswahl. options: [{value,label}]
+ * Die Knöpfe bleiben beim Umschalten erhalten (nur Klassen ändern sich): Würden sie neu erzeugt,
+ * leitet Safari den Klick an das erste Element weiter, sobald die Gruppe in einem <label> steckt.
+ */
 export function segmented(options, value, onChange, { name = '' } = {}) {
   const wrap = h('div', { class: 'segmented', role: 'radiogroup', 'aria-label': name });
-  const render = (val) => {
-    clear(wrap);
-    for (const o of options) {
-      wrap.append(h('button', {
-        type: 'button',
-        role: 'radio',
-        'aria-checked': String(o.value === val),
-        class: o.value === val ? 'active' : '',
-        onClick: () => {
-          render(o.value);
-          onChange(o.value);
-        },
-      }, o.label));
-    }
-  };
-  render(value);
+  const buttons = options.map((o) => h('button', {
+    type: 'button',
+    role: 'radio',
+    onClick: (e) => {
+      e.preventDefault();
+      mark(o.value);
+      onChange(o.value);
+    },
+  }, o.label));
+  const mark = (val) => buttons.forEach((b, i) => {
+    const on = options[i].value === val;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-checked', String(on));
+  });
+  mark(value);
+  wrap.append(...buttons);
   return wrap;
 }
 
-/** Plus/Minus-Zähler. */
-export function stepper(value, { min = 0, max = 99, step = 1, format = String, onChange }) {
+/** Plus/Minus-Zähler. `values` (optional) begrenzt auf erlaubte Werte, z. B. nur ungerade. */
+export function stepper(value, { min = 0, max = 99, step = 1, values = null, format = String, onChange }) {
   let v = value;
   const out = h('span', { class: 'stepper-value' }, format(v));
-  const set = (nv) => {
+  const allowed = values || [];
+  const set = (dir) => {
+    let nv = v + dir * step;
+    if (values) {
+      const list = dir > 0 ? allowed.filter((x) => x > v) : allowed.filter((x) => x < v).reverse();
+      nv = list.length ? list[0] : v;
+    }
     v = Math.min(max, Math.max(min, nv));
     out.textContent = format(v);
     onChange(v);
   };
-  return h('div', { class: 'stepper' },
-    h('button', { type: 'button', class: 'btn icon', 'aria-label': 'weniger', onClick: () => set(v - step) }, '−'),
+  const el = h('div', { class: 'stepper' },
+    h('button', { type: 'button', class: 'btn icon', 'aria-label': 'weniger', onClick: (e) => { e.preventDefault(); set(-1); } }, '−'),
     out,
-    h('button', { type: 'button', class: 'btn icon', 'aria-label': 'mehr', onClick: () => set(v + step) }, '+'));
+    h('button', { type: 'button', class: 'btn icon', 'aria-label': 'mehr', onClick: (e) => { e.preventDefault(); set(1); } }, '+'));
+  el.setValue = (nv) => {
+    v = nv;
+    out.textContent = format(v);
+  };
+  return el;
 }

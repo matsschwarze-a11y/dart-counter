@@ -12,6 +12,7 @@ export async function renderSetup(root, ctx) {
   const last = await repo.getMeta('lastSetup', null);
   const settings = structuredClone(last?.settings || DEFAULT_SETTINGS);
   settings.format = { ...DEFAULT_SETTINGS.format, ...settings.format };
+  if (![301, 501].includes(settings.startScore)) settings.startScore = 501; // 701 gibt es nicht mehr
   let players = await repo.listPlayers();
   const humans = () => players.filter((p) => !p.isBot);
   // Teilnehmer-Slots: {kind: 'player'|'guest'|'bot', playerId, botAverage}
@@ -79,20 +80,37 @@ export async function renderSetup(root, ctx) {
 
     // ---- Spielmodus
     const f = settings.format;
+    // Best of: nur ungerade Anzahl, sonst gäbe es Unentschieden-Grenzen wie „Best of 4"
+    const oddOnly = (max, withZero) => [...(withZero ? [0] : []), ...Array.from({ length: Math.ceil(max / 2) }, (_, i) => 2 * i + 1)];
+    const legsStepper = stepper(f.legs, { min: 1, max: 21, values: f.type === 'bestOf' ? oddOnly(21) : null, onChange: (v) => (f.legs = v) });
+    const setsStepper = stepper(f.sets || 0, {
+      min: 0, max: 13, values: f.type === 'bestOf' ? oddOnly(13, true) : null,
+      format: (v) => (v ? String(v) : 'keine'),
+      onChange: (v) => {
+        f.sets = v;
+        legsLabel.textContent = v ? 'Legs pro Set' : 'Legs';
+      },
+    });
+    const legsLabel = h('span', {}, f.sets ? 'Legs pro Set' : 'Legs');
     page.append(h('section', { class: 'card' },
       h('h2', {}, 'Spiel'),
-      h('label', { class: 'field' }, h('span', {}, 'Startscore'),
-        segmented([301, 501, 701].map((v) => ({ value: v, label: String(v) })), settings.startScore, (v) => (settings.startScore = v), { name: 'Startscore' })),
-      h('label', { class: 'field' }, h('span', {}, 'Out'),
+      h('div', { class: 'field' }, h('span', {}, 'Startscore'),
+        segmented([301, 501].map((v) => ({ value: v, label: String(v) })), settings.startScore, (v) => (settings.startScore = v), { name: 'Startscore' })),
+      h('div', { class: 'field' }, h('span', {}, 'Out'),
         segmented([{ value: 'double', label: 'Double' }, { value: 'master', label: 'Master' }, { value: 'straight', label: 'Straight' }], settings.outMode, (v) => (settings.outMode = v), { name: 'Out-Modus' })),
-      h('label', { class: 'field' }, h('span', {}, 'Double-in'),
+      h('div', { class: 'field' }, h('span', {}, 'Double-in'),
         segmented([{ value: false, label: 'Aus' }, { value: true, label: 'An' }], settings.doubleIn, (v) => (settings.doubleIn = v), { name: 'Double-in' })),
-      h('label', { class: 'field' }, h('span', {}, 'Format'),
-        segmented([{ value: 'firstTo', label: 'First to' }, { value: 'bestOf', label: 'Best of' }], f.type, (v) => (f.type = v), { name: 'Format' })),
-      h('div', { class: 'field' }, h('span', {}, 'Legs'),
-        stepper(f.legs, { min: 1, max: 21, onChange: (v) => (f.legs = v) })),
-      h('div', { class: 'field' }, h('span', {}, 'Sets'),
-        stepper(f.sets || 0, { min: 0, max: 13, format: (v) => (v ? String(v) : 'keine'), onChange: (v) => (f.sets = v) })),
+      h('div', { class: 'field' }, h('span', {}, 'Format'),
+        segmented([{ value: 'firstTo', label: 'First to' }, { value: 'bestOf', label: 'Best of' }], f.type, (v) => {
+          f.type = v;
+          if (v === 'bestOf') {
+            if (f.legs % 2 === 0) f.legs++;
+            if (f.sets && f.sets % 2 === 0) f.sets++;
+          }
+          render();
+        }, { name: 'Format' })),
+      h('div', { class: 'field' }, legsLabel, legsStepper),
+      h('div', { class: 'field' }, h('span', {}, 'Sets'), setsStepper),
     ));
 
     // ---- Anwurf

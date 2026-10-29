@@ -89,6 +89,23 @@ export class Repo {
     return this.db.put('meta', { key, value });
   }
 
+  // ---- Turniere (im Meta-Speicher, damit sie in Sicherungen enthalten sind) ----
+  listTournaments() {
+    return this.getMeta('tournaments', []);
+  }
+
+  async getRunningTournament() {
+    return (await this.listTournaments()).find((t) => t.status === 'running') || null;
+  }
+
+  async saveTournament(t) {
+    const all = await this.listTournaments();
+    const i = all.findIndex((x) => x.id === t.id);
+    if (i >= 0) all[i] = t;
+    else all.unshift(t);
+    await this.setMeta('tournaments', all);
+  }
+
   // ---- Export / Import ----
   async exportAll(now = Date.now()) {
     const [players, matches, meta] = await Promise.all([this.db.getAll('players'), this.db.getAll('matches'), this.db.getAll('meta')]);

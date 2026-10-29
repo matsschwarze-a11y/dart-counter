@@ -4,6 +4,7 @@ import { currentState } from '../../core/match.js';
 export async function renderHome(root, ctx) {
   ctx.setTitle('Dart Counter', { back: null });
   const running = await ctx.repo.getRunningMatch();
+  const tournament = await ctx.repo.getRunningTournament();
 
   const items = [];
   if (running) {
@@ -27,6 +28,7 @@ export async function renderHome(root, ctx) {
 
   items.push(h('nav', { class: 'menu' },
     h('a', { class: 'btn primary big', href: '#/neu' }, running ? 'Neues Match' : 'Neues Match starten'),
+    h('a', { class: 'btn big', href: '#/turnier' }, tournament ? 'Turnier fortsetzen' : 'Turnier'),
     h('a', { class: 'btn big', href: '#/statistik' }, 'Statistik'),
     h('a', { class: 'btn big', href: '#/historie' }, 'Match-Historie'),
     h('a', { class: 'btn big', href: '#/spieler' }, 'Spieler'),
