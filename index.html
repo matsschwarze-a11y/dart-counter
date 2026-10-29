@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Dart Counter</title>
+  <meta name="description" content="X01-Zähler für Steeldart mit Bot und Statistik">
+  <meta name="theme-color" content="#0f1216">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Dart Counter">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <header class="topbar" id="topbar">
+    <button class="btn icon ghost" id="back" aria-label="Zurück" hidden>‹</button>
+    <h1 id="title">Dart Counter</h1>
+    <span class="topbar-right" id="topbar-right"></span>
+  </header>
+  <main id="view" tabindex="-1"></main>
+  <div id="update-banner" class="update-banner" hidden>
+    <span>Neue Version verfügbar</span>
+    <button class="btn primary small" id="update-btn">Aktualisieren</button>
+  </div>
+  <noscript>Diese App benötigt JavaScript.</noscript>
+  <script type="module" src="js/ui/app.js"></script>
+</body>
+</html>

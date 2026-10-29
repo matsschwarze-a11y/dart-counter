@@ -1,0 +1,14 @@
+{
+  "name": "dart-counter",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Dart Counter (X01) als PWA mit realistischem Bot",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node tools/serve.js",
+    "calibrate": "node tools/calibrate.js",
+    "checkouts": "node tools/gen-checkouts.js",
+    "icons": "node tools/gen-icons.js"
+  }
+}
